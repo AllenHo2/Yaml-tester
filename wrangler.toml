@@ -1,11 +1,4 @@
-name = "yaml-tester"
-main = "src/worker.ts"
-compatibility_date = "2025-10-19"
+# Cloudflare Pages configuration for Next.js
+# This file is mainly for reference; `wrangler pages deploy` doesn't require it
+# Account ID and API token are set via environment variables
 
-# Optional: run a build before publishing (kept from previous config)
-[build]
-command = "npm run build"
-
-# Preview environment configuration to satisfy `--env=preview`
-[env.preview]
-name = "yaml-tester-preview"

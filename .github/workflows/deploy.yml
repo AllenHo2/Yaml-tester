@@ -42,7 +42,6 @@ jobs:
     steps:
       # Checkout repo at requested commit
       - name: Checkout code
-        if: ${{ env.ACT != 'true' }}
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.commit_sha != '' && inputs.commit_sha || github.ref }}
@@ -69,15 +68,16 @@ jobs:
           npm run build 2>&1 | tee -a build.log
 
 
-      # Deploy to Cloudflare using Wrangler
-      - name: Deploy to Cloudflare
+      # Deploy Next.js app to Cloudflare Pages
+      - name: Deploy to Cloudflare Pages
         id: deploy
         run: |
-          echo "Deploying with Wrangler..."
-          npx wrangler deploy --config wrangler.toml --env ${{ github.event.inputs.environment }}
+          echo "Deploying Next.js app to Cloudflare Pages..."
+          npx wrangler pages deploy .next --project-name=yaml-tester --branch=${{ github.event.inputs.environment }}
         env:
           # Prefer GitHub secret in CI; fall back to environment variable for local `act` runs
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_API_TOKEN || env.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID != '' && secrets.CLOUDFLARE_ACCOUNT_ID || env.CLOUDFLARE_ACCOUNT_ID }}
 
       # Expose job outputs for orchestrator consumption
       # Always runs to show output status
