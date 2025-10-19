@@ -1,5 +1,9 @@
-  {
-    "name": "worker-name",
-    "compatibility_date": "2025-10-19",
-    "main": "src/index.ts"
+{
+  // Kept for compatibility; wrangler.toml is the primary config
+  "name": "yaml-tester",
+  "compatibility_date": "2025-10-19",
+  "main": "src/worker.ts",
+  "env": {
+    "preview": {}
   }
+}

@@ -42,6 +42,7 @@ jobs:
     steps:
       # Checkout repo at requested commit
       - name: Checkout code
+        if: ${{ env.ACT != 'true' }}
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.commit_sha != '' && inputs.commit_sha || github.ref }}
@@ -73,9 +74,10 @@ jobs:
         id: deploy
         run: |
           echo "Deploying with Wrangler..."
-          npx wrangler deploy --env ${{ github.event.inputs.environment }}
+          npx wrangler deploy --config wrangler.toml --env ${{ github.event.inputs.environment }}
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          # Prefer GitHub secret in CI; fall back to environment variable for local `act` runs
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_API_TOKEN || env.CLOUDFLARE_API_TOKEN }}
 
       # Expose job outputs for orchestrator consumption
       # Always runs to show output status
