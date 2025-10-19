@@ -1,0 +1,92 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_id:
+        description: "Convex project id"
+        required: true
+        default: "local-dev"
+
+      # TODO: change add SSH branch protection
+      commit_sha:
+        description: "Git commit SHA to deploy"
+        required: true
+        default: ""
+      environment:
+        description: "Target environment (preview|production)"
+        required: true
+        default: "preview"
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    # Main container
+    container:
+      image: node:24
+
+    # Side Car service
+    # services:
+    #   log_and_cleanup: "placeholder"
+
+    env:
+      WORKOS_API_KEY: ${{ secrets.WORKOS_API_KEY}}
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+      NEXT_PUBLIC_CONVEX_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
+      SKIP_ENV_VALIDATION: "false"
+    outputs:
+      status: ${{ steps.set-outputs.outputs.status }}
+      artifact_name: ${{ steps.set-outputs.outputs.artifact_name }}
+      run_id: ${{ steps.set-outputs.outputs.run_id }}
+    steps:
+      # Checkout repo at requested commit
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit_sha != '' && inputs.commit_sha || github.ref }}
+          fetch-depth: 0
+
+      # Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      # Install dependencies
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci 2>&1 | tee -a build.log
+
+      # Build project
+      - name: Build project
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run build 2>&1 | tee -a build.log
+
+
+      # Deploy to Cloudflare using Wrangler
+      - name: Deploy to Cloudflare
+        id: deploy
+        run: |
+          echo "Deploying with Wrangler..."
+          npx wrangler deploy --env ${{ github.event.inputs.environment }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      # Expose job outputs for orchestrator consumption
+      # Always runs to show output status
+      - name: Set outputs
+        id: set-outputs
+        if: always()
+        env:
+          STATUS: ${{ job.status }}
+          ARTIFACT_NAME: build-logs-${{ github.run_id }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          echo "artifact_name=$ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"

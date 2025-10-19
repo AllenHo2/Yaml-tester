@@ -1,0 +1,11 @@
+name = "yaml-tester"
+main = "src/worker.ts"
+compatibility_date = "2025-10-19"
+
+# Optional: run a build before publishing (kept from previous config)
+[build]
+command = "npm run build"
+
+# Preview environment configuration to satisfy `--env=preview`
+[env.preview]
+name = "yaml-tester-preview"
