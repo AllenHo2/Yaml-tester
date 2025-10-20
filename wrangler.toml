@@ -2,3 +2,21 @@
 # This file is mainly for reference; `wrangler pages deploy` doesn't require it
 # Account ID and API token are set via environment variables
 
+name = "yaml-tester"
+main = ".open-next/worker.js"
+compatibility_date = "2025-10-19"
+compatibility_flags = ["nodejs_compat"]
+
+[observability]
+enabled = true
+
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+[env.preview]
+name = "yaml-tester-preview"
+
+[env.production]
+name = "yaml-tester-production"
+

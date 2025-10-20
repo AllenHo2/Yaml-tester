@@ -1,9 +1,13 @@
 {
   // Kept for compatibility; wrangler.toml is the primary config
   "name": "yaml-tester",
-  "compatibility_date": "2025-10-19",
   "main": "src/worker.ts",
-  "env": {
-    "preview": {}
+  "compatibility_date": "2025-10-19",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "bindings": [
+      "ASSETS"
+    ]
   }
 }

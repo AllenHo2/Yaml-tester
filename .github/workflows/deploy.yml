@@ -60,20 +60,21 @@ jobs:
           set -euo pipefail
           npm ci 2>&1 | tee -a build.log
 
-      # Build project
+      # Build project with OpenNext
       - name: Build project
         shell: bash
         run: |
           set -euo pipefail
           npm run build 2>&1 | tee -a build.log
+          echo "OpenNext build output:"
+          ls -la .open-next/ || echo "No .open-next directory found"
 
-
-      # Deploy Next.js app to Cloudflare Pages
-      - name: Deploy to Cloudflare Pages
+      # Deploy to Cloudflare Workers with OpenNext output
+      - name: Deploy to Cloudflare Workers
         id: deploy
         run: |
-          echo "Deploying Next.js app to Cloudflare Pages..."
-          npx wrangler pages deploy .next --project-name=yaml-tester --branch=${{ github.event.inputs.environment }}
+          echo "Deploying Next.js app via OpenNext to Cloudflare Workers..."
+          npx wrangler deploy --env=${{ github.event.inputs.environment }}
         env:
           # Prefer GitHub secret in CI; fall back to environment variable for local `act` runs
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_API_TOKEN || env.CLOUDFLARE_API_TOKEN }}
