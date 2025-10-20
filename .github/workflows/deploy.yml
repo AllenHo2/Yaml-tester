@@ -8,7 +8,6 @@ on:
         required: true
         default: "local-dev"
 
-      # TODO: change add SSH branch protection
       commit_sha:
         description: "Git commit SHA to deploy"
         required: true

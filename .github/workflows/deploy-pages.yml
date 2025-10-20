@@ -1,0 +1,39 @@
+# name: Deploy to Cloudflare Pages
+
+# on:
+#   workflow_dispatch:
+
+# jobs:
+#   build-and-deploy:
+#     runs-on: ubuntu-latest
+#     steps:
+#       # Checkout code
+#       - name: Checkout code
+#         uses: actions/checkout@v4
+
+#       # Setup Node.js
+#       - name: Setup Node.js
+#         uses: actions/setup-node@v4
+#         with:
+#           node-version: "24"
+#           cache: "npm"
+
+#       # Install dependencies
+#       - name: Install dependencies
+#         run: npm ci
+
+#       # Build project for Pages
+#       - name: Build project
+#         run: |
+#           npm run build:pages
+#           # The build command with output: 'export' will create the 'out' directory
+
+#       # Deploy to Cloudflare Pages
+#       - name: Deploy to Cloudflare Pages
+#         uses: cloudflare/pages-action@v1
+#         with:
+#           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_API_TOKEN || env.CLOUDFLARE_API_TOKEN }}
+#           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID != '' && secrets.CLOUDFLARE_ACCOUNT_ID || env.CLOUDFLARE_ACCOUNT_ID }}
+#           projectName: yaml-tester
+#           directory: out # Static export directory
+#           gitHubToken: ${{ secrets.GITHUB_TOKEN != '' && secrets.GITHUB_TOKEN || env.GITHUB_TOKEN }}

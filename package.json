@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "next build && open-next build --cloudflare",
+    "build:pages": "next build",
+    "export": "next build && next export",
     "check": "next lint && tsc --noEmit",
     "db:generate": "prisma migrate dev",
     "db:migrate": "prisma migrate deploy",
@@ -16,10 +17,15 @@
     "postinstall": "prisma generate",
     "lint": "next lint",
     "lint:fix": "next lint --fix",
-    "preview": "next build && next start",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
-  },
+    "typecheck": "tsc --noEmit",
+
+    "build": "next build",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
+    },
   "dependencies": {
     "@auth/prisma-adapter": "^2.7.2",
     "@opennextjs/cloudflare": "^1.11.0",
