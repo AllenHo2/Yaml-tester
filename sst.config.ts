@@ -4,23 +4,13 @@
 export default $config({
   app(input) {
     return {
-      name: "cloudflare-test",
+      name: "aws-test",
       removal: input?.stage === "production" ? "retain" : "remove",
       protect: ["production"].includes(input?.stage),
-      home: "cloudflare",
+      home: "aws",
     };
   },
   async run() {
-    const worker = new sst.cloudflare.Worker("NextjsWorker", {
-      handler: "sst-worker-entry.ts",
-      url: true,
-      assets: {
-        directory: ".open-next/assets",
-      },
-    });
-
-    return {
-      url: worker.url,
-    };
+    new sst.aws.Nextjs("MyWeb");
   },
 });
