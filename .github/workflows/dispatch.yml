@@ -1,0 +1,17 @@
+name: Repository Dispatch Workflow
+
+on:
+  repository_dispatch:
+    types: [my_custom_event_type] # Define the specific event types to listen for
+
+jobs:
+  process_dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Process client payload
+        run: |
+          echo "Received event type: ${{ github.event.action }}"
+          echo "Client payload: ${{ toJSON(github.event.client_payload) }}"

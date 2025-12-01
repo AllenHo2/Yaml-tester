@@ -2,6 +2,7 @@
 import { spawn } from "child_process";
 import path from "path";
 import { EventEmitter } from "events";
+import fs from "fs/promises";
 
 // Event types
 export type DeploymentEvent =
@@ -12,6 +13,9 @@ export type DeploymentEvent =
   | { type: "build:start" }
   | { type: "build:complete" }
   | { type: "build:error"; error: Error }
+  | { type: "inject:start"; data: { framework: string; platform: string } }
+  | { type: "inject:complete"; data: { filesInjected: string[] } }
+  | { type: "inject:error"; error: Error }
   | { type: "deploy:start" }
   | { type: "deploy:complete"; data?: { url?: string } }
   | { type: "deploy:error"; error: Error }
@@ -26,12 +30,92 @@ export class DeploymentEventEmitter extends EventEmitter {
   }
 }
 
-// get branch id and reuse it if not create a new one - should be an env -- andy seed , hady reuse builder 
-// dispatch events 
-// deployment yaml file - dispatch event that recieves his data -- another way of writing webhook -- call cleanup call logs 
-// he needs logs for everything except for the sst write 
-// deploy the sst so we don't keep it in the repo while we build
-// inject sst after build (check docs)
+// Injection configuration type
+type InjectionConfig = {
+  framework: string;
+  platform: string;
+  files: Array<{
+    source: string;      // Path to template file
+    destination: string; // Where to place it in the repo
+  }>;
+};
+
+// Define injection configurations
+const INJECTION_CONFIGS: Record<string, InjectionConfig> = {
+  "nextjs-cloudflare": {
+    framework: "nextjs",
+    platform: "cloudflare",
+    files: [
+      {
+        source: "templates/sst.config.ts",
+        destination: "sst.config.ts",
+      },
+      {
+        source: "templates/wrangler.toml",
+        destination: "wrangler.toml",
+      },
+    ],
+  },
+};
+
+async function injectFiles(
+  repoPath: string,
+  framework: string,
+  platform: string,
+  eventEmitter?: DeploymentEventEmitter
+): Promise<void> {
+  const configKey = `${framework}-${platform}`;
+  const config = INJECTION_CONFIGS[configKey];
+
+  if (!config) {
+    throw new Error(
+      `No injection configuration found for ${framework} on ${platform}. Available: ${Object.keys(INJECTION_CONFIGS).join(", ")}`
+    );
+  }
+
+  eventEmitter?.dispatch({
+    type: "inject:start",
+    data: { framework, platform },
+  });
+
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  console.log(`💉 Injecting files for ${framework} on ${platform}`);
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+  const injectedFiles: string[] = [];
+
+  try {
+    for (const file of config.files) {
+      const sourcePath = path.resolve(__dirname, "..", file.source);
+      const destPath = path.resolve(repoPath, file.destination);
+
+      console.log(`📝 Injecting: ${file.destination}`);
+
+      // Read template file
+      const content = await fs.readFile(sourcePath, "utf-8");
+
+
+      // Ensure destination directory exists
+      await fs.mkdir(path.dirname(destPath), { recursive: true });
+
+      // Write file
+      await fs.writeFile(destPath, content, "utf-8");
+      injectedFiles.push(file.destination);
+
+      console.log(`   ✓ Created ${file.destination}`);
+    }
+
+    eventEmitter?.dispatch({
+      type: "inject:complete",
+      data: { filesInjected: injectedFiles },
+    });
+
+    console.log(`\n✅ Successfully injected ${injectedFiles.length} file(s)\n`);
+  } catch (error) {
+    eventEmitter?.dispatch({ type: "inject:error", error: error as Error });
+    throw error;
+  }
+}
 
 async function runCommandSafe(
   command: string,
@@ -64,6 +148,8 @@ async function runCommandSafe(
 async function deployT3App(
   repoPath: string,
   environment = "preview",
+  framework = "t3",
+  platform = "cloudflare",
   eventEmitter?: DeploymentEventEmitter
 ): Promise<void> {
   const startTime = Date.now();
@@ -74,9 +160,11 @@ async function deployT3App(
       data: { repoPath: path.resolve(repoPath), environment },
     });
 
-    console.log(" Starting T3 App Deployment");
-    console.log(` Working directory: ${path.resolve(repoPath)}`);
-    console.log(` Environment: ${environment}\n`);
+    console.log("🚀 Starting T3 App Deployment");
+    console.log(`📁 Working directory: ${path.resolve(repoPath)}`);
+    console.log(`🌍 Environment: ${environment}`);
+    console.log(`🏗️  Framework: ${framework}`);
+    console.log(`☁️  Platform: ${platform}\n`);
 
     // Get commands from environment variables with defaults
     const packageManager = process.env.PACKAGE_MANAGER ?? "npm";
@@ -87,7 +175,7 @@ async function deployT3App(
     const deployTool = process.env.DEPLOY_TOOL ?? "wrangler";
     const deployAction = process.env.DEPLOY_ACTION ?? "deploy";
 
-    // Step 1: Install dependencies (mimics GitHub Actions step)
+    // Step 1: Install dependencies
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     console.log("📦 Step 1: Installing dependencies");
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -101,9 +189,9 @@ async function deployT3App(
       throw error;
     }
 
-    // Step 2: Build project with OpenNext (mimics GitHub Actions build step)
+    // Step 2: Build project
     console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    console.log("� Step 2: Building project");
+    console.log("🔨 Step 2: Building project");
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     
     try {
@@ -115,11 +203,26 @@ async function deployT3App(
       throw error;
     }
 
-    //Write the wrangler file -- create an sst config 
-
-    // Step 3: Deploy to Cloudflare Workers (mimics GitHub Actions deploy step)
+    // Step 3: Inject configuration files
     console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    console.log("  Step 3: Deploying to Cloudflare Workers ");
+    console.log("💉 Step 3: Injecting configuration files");
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    
+    try {
+      await injectFiles(
+        repoPath,
+        framework,
+        platform,
+        eventEmitter
+      );
+    } catch (error) {
+      eventEmitter?.dispatch({ type: "inject:error", error: error as Error });
+      throw error;
+    }
+
+    // Step 4: Deploy to Cloudflare Workers
+    console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.log("🚢 Step 4: Deploying to Cloudflare Workers");
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     
     // Check for required environment variables
@@ -160,6 +263,8 @@ async function deployT3App(
 // CLI execution
 const targetRepoPath = process.argv[2] ?? "./";
 const environment = process.argv[3] ?? "preview";
+const framework = process.argv[4] ?? "t3";
+const platform = process.argv[5] ?? "cloudflare";
 
 console.log(`
 ╔═══════════════════════════════════════════════════╗
@@ -176,7 +281,7 @@ eventEmitter.on("deployment", (event: DeploymentEvent) => {
   // For example: await fetch('https://your-webhook-url.com', { method: 'POST', body: JSON.stringify(event) });
 });
 
-deployT3App(targetRepoPath, environment, eventEmitter).catch((_error) => {
+deployT3App(targetRepoPath, environment, framework, platform, eventEmitter).catch((_error) => {
   process.exit(1);
 });
 

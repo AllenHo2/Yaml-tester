@@ -44,3 +44,9 @@ yarn-error.log*
 
 # idea files
 .idea
+
+# Open Next
+.open-next
+
+# SST
+.sst
