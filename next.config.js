@@ -5,9 +5,6 @@
 import "./src/env.js";
 
 /** @type {import("next").NextConfig} */
-const config = {
-  // Intentional type error for testing: reactStrictMode should be boolean, not string
-  reactStrictMode: "true",
-};
+const config = {};
 
 export default config;

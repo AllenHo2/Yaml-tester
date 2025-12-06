@@ -7,6 +7,9 @@ import { api, HydrateClient } from "@/trpc/server";
 export default async function Home() {
   const hello = await api.post.hello({ text: "from tRPC" });
   const session = await auth();
+  
+  // Intentional type error for testing: assigning string to number
+  const count: number = "this is a string";
 
   if (session?.user) {
     void api.post.getLatest.prefetch();
