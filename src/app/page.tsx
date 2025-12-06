@@ -10,6 +10,7 @@ export default async function Home() {
   
   // Intentional type error for testing: assigning string to number
   const count: number = "this is a string";
+  // burger
 
   if (session?.user) {
     void api.post.getLatest.prefetch();
